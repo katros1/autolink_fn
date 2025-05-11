@@ -1,0 +1,880 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:intl/intl.dart';
+import '../../models/car.dart';
+import '../../models/rating.dart';
+import '../../common/widgets/app_drawer.dart';
+
+class CarDetailsScreen extends StatefulWidget {
+  final String carId;
+
+  const CarDetailsScreen({super.key, required this.carId});
+
+  @override
+  State<CarDetailsScreen> createState() => _CarDetailsScreenState();
+}
+
+class _CarDetailsScreenState extends State<CarDetailsScreen> {
+  Car? _car;
+  List<Rating> _ratings = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  
+  // For image carousel
+  int _currentImageIndex = 0;
+  
+  // For date selection
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now().add(const Duration(days: 1));
+  
+  // For pricing calculation
+  double _baseRate = 0;
+  double _serviceFee = 0;
+  double _securityDeposit = 0;
+  double _total = 0;
+  
+  // Create a key for the scaffold to access the drawer
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCarDetails();
+  }
+
+  Future<void> _fetchCarDetails() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // For Android emulator, use 10.0.2.2 instead of localhost
+      // For iOS simulator, use localhost
+      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        final carData = jsonData['data'];
+        
+        // Parse ratings
+        final List<dynamic> ratingsData = carData['ratings'] ?? [];
+        final List<Rating> ratings = ratingsData.map((ratingData) => Rating.fromJson(ratingData)).toList();
+        
+        setState(() {
+          _car = Car.fromJson(carData);
+          _ratings = ratings;
+          _isLoading = false;
+          
+          // Set pricing details
+          _baseRate = _car!.rentalPricePerDay;
+          _serviceFee = _baseRate * 0.1; // 10% service fee
+          _securityDeposit = _baseRate * 1.0; // 100% security deposit
+          _updateTotal();
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load car details. Please try again.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error: ${e.toString()}';
+      });
+    }
+  }
+  
+  void _updateTotal() {
+    final days = _endDate.difference(_startDate).inDays;
+    _total = (_baseRate * days) + _serviceFee + _securityDeposit;
+  }
+  
+  void _nextImage() {
+    if (_car != null && _car!.imageUrls.isNotEmpty) {
+      setState(() {
+        _currentImageIndex = (_currentImageIndex + 1) % (_car!.imageUrls.length + 1);
+      });
+    }
+  }
+  
+  void _previousImage() {
+    if (_car != null && _car!.imageUrls.isNotEmpty) {
+      setState(() {
+        _currentImageIndex = (_currentImageIndex - 1 + _car!.imageUrls.length + 1) % (_car!.imageUrls.length + 1);
+      });
+    }
+  }
+  
+  String _getCurrentImageUrl() {
+    if (_car == null) return '';
+    if (_currentImageIndex == 0) return _car!.coverImageUrl;
+    return _car!.imageUrls[_currentImageIndex - 1];
+  }
+  
+  Future<void> _selectStartDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null && picked != _startDate) {
+      setState(() {
+        _startDate = picked;
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate.add(const Duration(days: 1));
+        }
+        _updateTotal();
+      });
+    }
+  }
+  
+  Future<void> _selectEndDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate,
+      firstDate: _startDate.add(const Duration(days: 1)),
+      lastDate: _startDate.add(const Duration(days: 30)),
+    );
+    if (picked != null && picked != _endDate) {
+      setState(() {
+        _endDate = picked;
+        _updateTotal();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: Colors.grey[100],
+      drawer: const AppDrawer(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(child: Text(_errorMessage!))
+              : _car == null
+                  ? const Center(child: Text('Car not found'))
+                  : Column(
+                      children: [
+                        // Custom green header (same as home screen)
+                        Container(
+                          color: const Color(0xFF00A651), // Green color
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                          child: SafeArea(
+                            bottom: false,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Hamburger menu icon (white)
+                                IconButton(
+                                  icon: const Icon(Icons.menu, color: Colors.white),
+                                  onPressed: () {
+                                    // Open the drawer
+                                    _scaffoldKey.currentState?.openDrawer();
+                                  },
+                                ),
+                                // AutoLink logo/text
+                                const Text(
+                                  'AutoLink',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                // Empty SizedBox to balance the layout
+                                const SizedBox(width: 48),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Back to Cars button below header
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              const Text(
+                                'Back to Cars',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Rest of the content
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Car title
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    _car!.title,
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                // Car image carousel
+                                Container(
+                                  height: 250,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      // Main image
+                                      Center(
+                                        child: Image.network(
+                                          _getCurrentImageUrl(),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return const Center(
+                                              child: Icon(Icons.error, color: Colors.grey),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      // Left arrow
+                                      Positioned(
+                                        left: 8,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Center(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.3),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: IconButton(
+                                              icon: const Icon(Icons.chevron_left, color: Colors.white),
+                                              onPressed: _previousImage,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // Right arrow
+                                      Positioned(
+                                        right: 8,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Center(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.3),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: IconButton(
+                                              icon: const Icon(Icons.chevron_right, color: Colors.white),
+                                              onPressed: _nextImage,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Thumbnail images
+                                SizedBox(
+                                  height: 80,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.all(8),
+                                    itemCount: _car!.imageUrls.length + 1,
+                                    itemBuilder: (context, index) {
+                                      final imageUrl = index == 0 ? _car!.coverImageUrl : _car!.imageUrls[index - 1];
+                                      final isSelected = _currentImageIndex == index;
+                                      
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _currentImageIndex = index;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: 60,
+                                          margin: const EdgeInsets.only(right: 8),
+                                          decoration: BoxDecoration(
+                                            border: isSelected ? Border.all(color: Colors.blue, width: 2) : null,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Image.network(
+                                              imageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  color: Colors.grey[300],
+                                                  child: const Center(
+                                                    child: Icon(Icons.error, color: Colors.grey, size: 20),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                // About this vehicle
+                                Card(
+                                  margin: const EdgeInsets.all(16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'About this vehicle',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _car!.description,
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Specifications
+                                Card(
+                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Specifications',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.calendar_today, color: Colors.blue[700], size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Text(
+                                                        'Year',
+                                                        style: TextStyle(
+                                                          color: Colors.grey,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        _car!.year.toString(),
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.settings, color: Colors.blue[700], size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Text(
+                                                        'Transmission',
+                                                        style: TextStyle(
+                                                          color: Colors.grey,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        _car!.transmission,
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.local_gas_station, color: Colors.blue[700], size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Text(
+                                                        'Fuel Type',
+                                                        style: TextStyle(
+                                                          color: Colors.grey,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        _car!.fuelType,
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.airline_seat_recline_normal, color: Colors.blue[700], size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Text(
+                                                        'Seats',
+                                                        style: TextStyle(
+                                                          color: Colors.grey,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        _car!.seatCount.toString(),
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Customer Reviews
+                                Card(
+                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Customer Reviews',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Row(
+                                              children: List.generate(5, (index) {
+                                                return Icon(
+                                                  index < _car!.averageRating.round() ? Icons.star : Icons.star_border,
+                                                  color: Colors.amber,
+                                                  size: 20,
+                                                );
+                                              }),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text('(${_ratings.length} ratings)'),
+                                            const SizedBox(width: 8),
+                                            Text('0 completed trips'),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _ratings.isEmpty
+                                            ? const Center(child: Text('No reviews yet'))
+                                            : ListView.builder(
+                                                shrinkWrap: true,
+                                                physics: const NeverScrollableScrollPhysics(),
+                                                itemCount: _ratings.length,
+                                                itemBuilder: (context, index) {
+                                                  final rating = _ratings[index];
+                                                  return Padding(
+                                                    padding: const EdgeInsets.only(bottom: 16),
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Row(
+                                                          children: [
+                                                            const CircleAvatar(
+                                                              backgroundColor: Colors.grey,
+                                                              child: Icon(Icons.person, color: Colors.white),
+                                                            ),
+                                                            const SizedBox(width: 8),
+                                                            Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                const Text(
+                                                                  'Anonymous User',
+                                                                  style: TextStyle(
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                                Text(
+                                                                  DateFormat('MMM dd, yyyy').format(DateTime.parse(rating.ratedAt)),
+                                                                  style: TextStyle(
+                                                                    color: Colors.grey[600],
+                                                                    fontSize: 12,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(height: 8),
+                                                        Row(
+                                                          children: List.generate(5, (starIndex) {
+                                                            return Icon(
+                                                              starIndex < rating.stars ? Icons.star : Icons.star_border,
+                                                              color: Colors.amber,
+                                                              size: 16,
+                                                            );
+                                                          }),
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        Text(rating.comment),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Price and booking
+                                if (_car!.forRent)
+                                  Card(
+                                    margin: const EdgeInsets.all(16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'RWF ${_car!.rentalPricePerDay.toInt()}',
+                                                style: const TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const Text(
+                                                '/day',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Row(
+                                                children: List.generate(5, (index) {
+                                                  return Icon(
+                                                    index < _car!.averageRating.round() ? Icons.star : Icons.star_border,
+                                                    color: Colors.amber,
+                                                    size: 16,
+                                                  );
+                                                }),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text('(${_ratings.length})'),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 24),
+                                          const Text(
+                                            'Select Rental Period',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    const Text('Start Date'),
+                                                    const SizedBox(height: 4),
+                                                    InkWell(
+                                                      onTap: () => _selectStartDate(context),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                        decoration: BoxDecoration(
+                                                          border: Border.all(color: Colors.grey),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                          children: [
+                                                            Text(DateFormat('MM/dd/yyyy').format(_startDate)),
+                                                            const Icon(Icons.calendar_today, size: 16),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    const Text('End Date'),
+                                                    const SizedBox(height: 4),
+                                                    InkWell(
+                                                      onTap: () => _selectEndDate(context),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                        decoration: BoxDecoration(
+                                                          border: Border.all(color: Colors.grey),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                          children: [
+                                                            Text(DateFormat('MM/dd/yyyy').format(_endDate)),
+                                                            const Icon(Icons.calendar_today, size: 16),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 24),
+                                          const Text(
+                                            'Pricing Details',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text('Base Rate (${_endDate.difference(_startDate).inDays} days)'),
+                                              Text('${(_baseRate * _endDate.difference(_startDate).inDays).toInt()} RWF'),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text('Service Fee'),
+                                              Text('${_serviceFee.toInt()} RWF'),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text('Security Deposit'),
+                                              Text('${_securityDeposit.toInt()} RWF'),
+                                            ],
+                                          ),
+                                          const Divider(height: 24),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text(
+                                                'Total',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                '${_total.toInt()} RWF',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 24),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                // TODO: Implement booking functionality
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF00A651),
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Book Now',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                // If the car is for sale, show sale price and contact seller button
+                                if (_car!.forSale)
+                                  Card(
+                                    margin: const EdgeInsets.all(16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'RWF ${_car!.salePrice.toInt()}',
+                                                style: const TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Row(
+                                                children: List.generate(5, (index) {
+                                                  return Icon(
+                                                    index < _car!.averageRating.round() ? Icons.star : Icons.star_border,
+                                                    color: Colors.amber,
+                                                    size: 16,
+                                                  );
+                                                }),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text('(${_ratings.length})'),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 24),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                // TODO: Implement contact seller functionality
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF00A651),
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Contact Seller',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                // Add some bottom padding
+                                const SizedBox(height: 24),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+      // Add a floating action button for chat
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // TODO: Implement chat functionality
+        },
+        backgroundColor: Colors.white,
+        child: const Icon(Icons.chat, color: Color(0xFF00A651)),
+      ),
+    );
+  }
+}
+
+
+
