@@ -9,6 +9,11 @@ import '../screens/auth/set_new_password_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/car/car_details_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/user/become_owner_screen.dart';
+import '../screens/admin/role_requests_screen.dart';
+import '../screens/owner/owner_cars_screen.dart';
+import '../screens/owner/add_car_screen.dart';
+import '../screens/owner/edit_car_screen.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -46,6 +51,19 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => CarDetailsScreen(carId: carId),
         );
+      case '/become_owner':
+        return MaterialPageRoute(builder: (_) => const BecomeOwnerScreen());
+      case '/admin/role_requests':
+        return MaterialPageRoute(builder: (_) => const RoleRequestsScreen());
+      case '/owner/cars':
+        return MaterialPageRoute(builder: (_) => const OwnerCarsScreen());
+      case '/add_car':
+        return MaterialPageRoute(builder: (_) => const AddCarScreen());
+      case '/edit_car':
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => EditCarScreen(carId: args['carId']),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
@@ -55,6 +73,16 @@ class AppRouter {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

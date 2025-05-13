@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/car.dart';
 import '../../models/rating.dart';
 import '../../common/widgets/app_drawer.dart';
+import '../../../services/user_service.dart';
 
 class CarDetailsScreen extends StatefulWidget {
   final String carId;
@@ -21,6 +22,8 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
   List<Rating> _ratings = [];
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isOwner = false;
+  bool _isDeleting = false;
   
   // For image carousel
   int _currentImageIndex = 0;
@@ -51,6 +54,9 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
     });
 
     try {
+      // Get current user to check if they're the owner
+      final user = await UserService.getUser();
+      
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
       final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
@@ -59,6 +65,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'),
         headers: {
           'Content-Type': 'application/json',
+          if (user != null && user.token != null) 'Authorization': 'Bearer ${user.token}',
         },
       );
 
@@ -70,10 +77,14 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         final List<dynamic> ratingsData = carData['ratings'] ?? [];
         final List<Rating> ratings = ratingsData.map((ratingData) => Rating.fromJson(ratingData)).toList();
         
+        // Check if current user is the owner
+        final bool isOwner = user != null && user.userId == carData['ownerId'];
+        
         setState(() {
           _car = Car.fromJson(carData);
           _ratings = ratings;
           _isLoading = false;
+          _isOwner = isOwner;
           
           // Set pricing details
           _baseRate = _car!.rentalPricePerDay;
@@ -152,6 +163,79 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         _endDate = picked;
         _updateTotal();
       });
+    }
+  }
+
+  Future<void> _deleteCar() async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Car'),
+        content: const Text('Are you sure you want to delete this car? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm != true) return;
+    
+    setState(() {
+      _isDeleting = true;
+    });
+    
+    try {
+      final user = await UserService.getUser();
+      if (user == null || user.token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to delete a car')),
+        );
+        setState(() {
+          _isDeleting = false;
+        });
+        return;
+      }
+      
+      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+      
+      setState(() {
+        _isDeleting = false;
+      });
+      
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Car deleted successfully')),
+        );
+        // Navigate back to owner cars screen with refresh flag
+        Navigator.pop(context, true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete car. Please try again.')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isDeleting = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
     }
   }
 
@@ -607,27 +691,29 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                     ),
                                   ),
                                 ),
-                                // Price and booking
-                                if (_car!.forRent)
-                                  Card(
-                                    margin: const EdgeInsets.all(16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text(
-                                                'RWF ${_car!.rentalPricePerDay.toInt()}',
-                                                style: const TextStyle(
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                // Price and booking or owner actions
+                                Card(
+                                  margin: const EdgeInsets.all(16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              _car!.forRent 
+                                                  ? 'RWF ${_car!.rentalPricePerDay.toInt()}/day'
+                                                  : 'RWF ${_car!.salePrice.toInt()}',
+                                              style: const TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.bold,
                                               ),
+                                            ),
+                                            if (_car!.forRent)
                                               const Text(
                                                 '/day',
                                                 style: TextStyle(
@@ -635,21 +721,84 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                                   color: Colors.grey,
                                                 ),
                                               ),
-                                              const SizedBox(width: 8),
-                                              Row(
-                                                children: List.generate(5, (index) {
-                                                  return Icon(
-                                                    index < _car!.averageRating.round() ? Icons.star : Icons.star_border,
-                                                    color: Colors.amber,
-                                                    size: 16,
-                                                  );
-                                                }),
+                                            const SizedBox(width: 8),
+                                            Row(
+                                              children: List.generate(5, (index) {
+                                                return Icon(
+                                                  index < _car!.averageRating.round() ? Icons.star : Icons.star_border,
+                                                  color: Colors.amber,
+                                                  size: 16,
+                                                );
+                                              }),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text('(${_ratings.length})'),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 24),
+                                        
+                                        // Show different UI based on whether user is owner or not
+                                        if (_isOwner) ...[
+                                          // Owner actions
+                                          const Text(
+                                            'Owner Actions',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  onPressed: () {
+                                                    // Navigate to edit car screen
+                                                    Navigator.pushNamed(
+                                                      context,
+                                                      '/edit_car',
+                                                      arguments: {'carId': _car!.id},
+                                                    ).then((result) {
+                                                      if (result == true) {
+                                                        _fetchCarDetails();
+                                                      }
+                                                    });
+                                                  },
+                                                  icon: const Icon(Icons.edit),
+                                                  label: const Text('Update'),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.blue,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                  ),
+                                                ),
                                               ),
-                                              const SizedBox(width: 4),
-                                              Text('(${_ratings.length})'),
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  onPressed: _isDeleting ? null : _deleteCar,
+                                                  icon: _isDeleting 
+                                                      ? const SizedBox(
+                                                          width: 16,
+                                                          height: 16,
+                                                          child: CircularProgressIndicator(
+                                                            strokeWidth: 2,
+                                                            color: Colors.white,
+                                                          ),
+                                                        )
+                                                      : const Icon(Icons.delete),
+                                                  label: Text(_isDeleting ? 'Deleting...' : 'Delete'),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.red,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                                  ),
+                                                ),
+                                              ),
                                             ],
                                           ),
-                                          const SizedBox(height: 24),
+                                        ] else if (_car!.forRent) ...[
+                                          // Rental booking UI for non-owners
                                           const Text(
                                             'Select Rental Period',
                                             style: TextStyle(
@@ -789,46 +938,8 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                // If the car is for sale, show sale price and contact seller button
-                                if (_car!.forSale)
-                                  Card(
-                                    margin: const EdgeInsets.all(16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text(
-                                                'RWF ${_car!.salePrice.toInt()}',
-                                                style: const TextStyle(
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Row(
-                                                children: List.generate(5, (index) {
-                                                  return Icon(
-                                                    index < _car!.averageRating.round() ? Icons.star : Icons.star_border,
-                                                    color: Colors.amber,
-                                                    size: 16,
-                                                  );
-                                                }),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text('(${_ratings.length})'),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 24),
+                                        ] else if (_car!.forSale) ...[
+                                          // Sale contact UI for non-owners
                                           SizedBox(
                                             width: double.infinity,
                                             child: ElevatedButton(
@@ -853,9 +964,10 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                             ),
                                           ),
                                         ],
-                                      ),
+                                      ],
                                     ),
                                   ),
+                                ),
                                 // Add some bottom padding
                                 const SizedBox(height: 24),
                               ],
@@ -875,6 +987,9 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
     );
   }
 }
+
+
+
 
 
 

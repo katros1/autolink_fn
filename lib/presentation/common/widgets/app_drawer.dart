@@ -156,6 +156,18 @@ class _AppDrawerState extends State<AppDrawer> {
                       // Add navigation logic here
                     },
                   ),
+                  // Only show "Become a Car Owner" if user is not already an OWNER or ADMIN
+                  if (_user == null || (!_user!.roles.contains('OWNER') && !_user!.roles.contains('ADMIN')))
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.verified_user,
+                      title: 'Become a Car Owner',
+                      onTap: () {
+                        // Navigate to become owner screen
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/become_owner');
+                      },
+                    ),
                   _buildMenuItem(
                     context,
                     icon: Icons.settings,
@@ -186,6 +198,43 @@ class _AppDrawerState extends State<AppDrawer> {
                       _logout(context);
                     },
                   ),
+                  // Show "My Cars" only for OWNER role
+                  if (_user != null && _user!.roles.contains('OWNER'))
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.directions_car,
+                      title: 'My Cars',
+                      onTap: () {
+                        // Navigate to owner cars screen
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/owner/cars');
+                      },
+                    ),
+                  // Admin section - only show if user is admin
+                  if (_user != null && _user!.roles.contains('ADMIN')) ...[
+                    const Divider(),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text(
+                        'Admin',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.admin_panel_settings,
+                      title: 'Role Requests',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/admin/role_requests');
+                      },
+                    ),
+                    // Add more admin menu items here
+                  ],
                 ],
               ),
             ),
@@ -214,4 +263,10 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 }
+
+
+
+
+
+
 
