@@ -1,6 +1,8 @@
 class Car {
   final String id;
   final String ownerId;
+  final String? ownerName;
+  final String? ownerPhoneNumber;
   final String title;
   final String description;
   final String brand;
@@ -31,6 +33,8 @@ class Car {
   Car({
     required this.id,
     required this.ownerId,
+    this.ownerName,
+    this.ownerPhoneNumber,
     required this.title,
     required this.description,
     required this.brand,
@@ -63,6 +67,8 @@ class Car {
     return Car(
       id: json['id'] ?? '',
       ownerId: json['ownerId'] ?? '',
+      ownerName: json['ownerName'],
+      ownerPhoneNumber: json['ownerPhoneNumber'],
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       brand: json['brand'] ?? '',
@@ -92,3 +98,4 @@ class Car {
     );
   }
 }
+

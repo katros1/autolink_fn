@@ -7,6 +7,7 @@ import '../../models/car.dart';
 import '../../models/rating.dart';
 import '../../common/widgets/app_drawer.dart';
 import '../../../services/user_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CarDetailsScreen extends StatefulWidget {
   final String carId;
@@ -235,6 +236,112 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  // Add this method to handle booking
+  Future<void> _bookCar() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get current user
+      final user = await UserService.getUser();
+      if (user == null || user.token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to book a car')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      // For Android emulator, use 10.0.2.2 instead of localhost
+      // For iOS simulator, use localhost
+      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      
+      // Format dates for API
+      final startDateFormatted = "${DateFormat('yyyy-MM-dd').format(_startDate)}T10:00:00";
+      final endDateFormatted = "${DateFormat('yyyy-MM-dd').format(_endDate)}T18:00:00";
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/v1/bookings/${_car!.id}/book'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${user.token}',
+        },
+        body: jsonEncode({
+          'startDate': startDateFormatted,
+          'endDate': endDateFormatted,
+        }),
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Booking successful
+        final responseData = jsonDecode(response.body);
+        final bookingId = responseData['data']['id'];
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Booking successful!')),
+        );
+        
+        // Navigate to booking details or confirmation screen
+        // TODO: Add navigation to booking details screen
+        // Navigator.pushNamed(context, '/booking_details', arguments: {'bookingId': bookingId});
+      } else {
+        // Booking failed
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['message'] ?? 'Failed to book car. Please try again.';
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  // Add this method to handle opening WhatsApp
+  Future<void> _contactSellerViaWhatsApp() async {
+    if (_car == null) return;
+    
+    // Get owner phone number from car data
+    final phoneNumber = _car!.ownerPhoneNumber ?? '';
+    
+    if (phoneNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seller phone number not available')),
+      );
+      return;
+    }
+    
+    // Format phone number (remove any spaces or special characters)
+    final formattedPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // Create WhatsApp URL
+    final whatsappUrl = 'https://wa.me/$formattedPhone?text=Hello, I am interested in your ${_car!.title} listed on AutoLink.';
+    
+    // Try to launch WhatsApp
+    if (await canLaunch(whatsappUrl)) {
+      await launch(whatsappUrl);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open WhatsApp. Please make sure it is installed.')),
       );
     }
   }
@@ -918,9 +1025,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                           SizedBox(
                                             width: double.infinity,
                                             child: ElevatedButton(
-                                              onPressed: () {
-                                                // TODO: Implement booking functionality
-                                              },
+                                              onPressed: _isLoading ? null : _bookCar,
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: const Color(0xFF00A651),
                                                 foregroundColor: Colors.white,
@@ -929,13 +1034,22 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
                                               ),
-                                              child: const Text(
-                                                'Book Now',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
+                                              child: _isLoading
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : const Text(
+                                                    'Book Now',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
                                             ),
                                           ),
                                         ] else if (_car!.forSale) ...[
@@ -943,9 +1057,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                           SizedBox(
                                             width: double.infinity,
                                             child: ElevatedButton(
-                                              onPressed: () {
-                                                // TODO: Implement contact seller functionality
-                                              },
+                                              onPressed: _contactSellerViaWhatsApp,
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: const Color(0xFF00A651),
                                                 foregroundColor: Colors.white,
@@ -987,7 +1099,6 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
     );
   }
 }
-
 
 
 

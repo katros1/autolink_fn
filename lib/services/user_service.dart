@@ -40,4 +40,17 @@ class UserService {
     final user = await getUser();
     return user?.token;
   }
+
+  // Add this method to update user info
+  static Future<void> updateUserInfo(Map<String, dynamic> userData) async {
+    final user = await getUser();
+    if (user != null) {
+      // Update user properties with new data
+      final updatedUser = User.fromJson({...userData, 'token': user.token});
+      // Save the updated user
+      await saveUser(updatedUser);
+    }
+  }
+
 }
+

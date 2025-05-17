@@ -14,6 +14,14 @@ import '../screens/admin/role_requests_screen.dart';
 import '../screens/owner/owner_cars_screen.dart';
 import '../screens/owner/add_car_screen.dart';
 import '../screens/owner/edit_car_screen.dart';
+import '../screens/owner/owner_bookings_screen.dart';
+import '../screens/booking/booking_details_screen.dart';
+import '../screens/client/client_bookings_screen.dart';
+import '../screens/client/client_booking_details_screen.dart';
+import '../models/booking.dart';
+import '../screens/admin/users_screen.dart';
+import '../screens/admin/user_details_screen.dart';
+import '../screens/settings/settings_screen.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -64,6 +72,29 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => EditCarScreen(carId: args['carId']),
         );
+      case '/owner/bookings':
+        return MaterialPageRoute(builder: (_) => const OwnerBookingsScreen());
+      case '/booking/details':
+        final booking = settings.arguments as Booking;
+        return MaterialPageRoute(
+          builder: (_) => BookingDetailsScreen(booking: booking),
+        );
+      case '/client/bookings':
+        return MaterialPageRoute(builder: (_) => const ClientBookingsScreen());
+      case '/client/booking/details':
+        final booking = settings.arguments as Booking;
+        return MaterialPageRoute(
+          builder: (_) => ClientBookingDetailsScreen(booking: booking),
+        );
+      case '/admin/users':
+        return MaterialPageRoute(builder: (_) => const UsersScreen());
+      case '/admin/user_details':
+        final userId = settings.arguments as String;
+        return MaterialPageRoute(
+          builder: (_) => UserDetailsScreen(userId: userId),
+        );
+      case '/settings':
+        return MaterialPageRoute(builder: (_) => const SettingsScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
@@ -73,6 +104,15 @@ class AppRouter {
     }
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

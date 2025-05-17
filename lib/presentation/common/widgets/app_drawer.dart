@@ -128,22 +128,20 @@ class _AppDrawerState extends State<AppDrawer> {
                 children: [
                   _buildMenuItem(
                     context,
-                    icon: Icons.history,
-                    title: 'History',
-                    onTap: () {
-                      // Navigate to history screen
-                      Navigator.pop(context);
-                      // Add navigation logic here
-                    },
-                  ),
-                  _buildMenuItem(
-                    context,
                     icon: Icons.home,
                     title: 'Home',
                     onTap: () {
                       // Navigate to home screen
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, '/home');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('My Booking History'),
+                    onTap: () {
+                      Navigator.pop(context); // Close the drawer
+                      Navigator.pushNamed(context, '/client/bookings');
                     },
                   ),
                   _buildMenuItem(
@@ -168,37 +166,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         Navigator.pushNamed(context, '/become_owner');
                       },
                     ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.settings,
-                    title: 'Settings',
-                    onTap: () {
-                      // Navigate to settings screen
-                      Navigator.pop(context);
-                      // Add navigation logic here
-                    },
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.help_outline,
-                    title: 'Help and Support',
-                    onTap: () {
-                      // Navigate to help screen
-                      Navigator.pop(context);
-                      // Add navigation logic here
-                    },
-                  ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.logout,
-                    title: 'Logout',
-                    onTap: () {
-                      // Logout logic
-                      Navigator.pop(context);
-                      _logout(context);
-                    },
-                  ),
-                  // Show "My Cars" only for OWNER role
+                    // Show "My Cars" only for OWNER role
                   if (_user != null && _user!.roles.contains('OWNER'))
                     _buildMenuItem(
                       context,
@@ -208,6 +176,18 @@ class _AppDrawerState extends State<AppDrawer> {
                         // Navigate to owner cars screen
                         Navigator.pop(context);
                         Navigator.pushNamed(context, '/owner/cars');
+                      },
+                    ),
+                  // Show "My Bookings" only for OWNER role
+                  if (_user != null && _user!.roles.contains('OWNER'))
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.book_online,
+                      title: 'My Bookings',
+                      onTap: () {
+                        // Navigate to owner bookings screen
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/owner/bookings');
                       },
                     ),
                   // Admin section - only show if user is admin
@@ -233,8 +213,48 @@ class _AppDrawerState extends State<AppDrawer> {
                         Navigator.pushNamed(context, '/admin/role_requests');
                       },
                     ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.people,
+                      title: 'Manage Users',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/admin/users');
+                      },
+                    ),
                     // Add more admin menu items here
+                    const Divider(), // Added divider to separate admin section from other menu items
                   ],
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.settings,
+                    title: 'Settings',
+                    onTap: () {
+                      // Navigate to settings screen
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.help_outline,
+                    title: 'Help and Support',
+                    onTap: () {
+                      // Navigate to help screen
+                      Navigator.pop(context);
+                      // Add navigation logic here
+                    },
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.logout,
+                    title: 'Logout',
+                    onTap: () {
+                      // Logout logic
+                      Navigator.pop(context);
+                      _logout(context);
+                    },
+                  ),
                 ],
               ),
             ),
@@ -263,6 +283,12 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 }
+
+
+
+
+
+
 
 
 
