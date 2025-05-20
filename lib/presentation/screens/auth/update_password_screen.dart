@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../../services/user_service.dart';
+import '../../../utils/api_config.dart';
 
 class UpdatePasswordScreen extends StatefulWidget {
   const UpdatePasswordScreen({super.key});
@@ -58,7 +59,7 @@ class _UpdatePasswordScreenState extends State<UpdatePasswordScreen> {
       
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.put(
         Uri.parse('$baseUrl/api/v1/users/update-password'),
@@ -314,4 +315,5 @@ class _UpdatePasswordScreenState extends State<UpdatePasswordScreen> {
     );
   }
 }
+
 

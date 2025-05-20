@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 import 'package:intl/intl.dart';
 import '../../../services/user_service.dart';
 import '../../models/booking.dart';
+import '../../../utils/api_config.dart';
 
 class ClientBookingDetailsScreen extends StatefulWidget {
   final Booking booking;
@@ -56,7 +57,7 @@ class _ClientBookingDetailsScreenState extends State<ClientBookingDetailsScreen>
         return;
       }
       
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.put(
         Uri.parse('$baseUrl/api/v1/bookings/${widget.booking.bookingId}/cancel'),
@@ -390,5 +391,6 @@ class _ClientBookingDetailsScreenState extends State<ClientBookingDetailsScreen>
     }
   }
 }
+
 
 

@@ -206,6 +206,15 @@ class _AppDrawerState extends State<AppDrawer> {
                     ),
                     _buildMenuItem(
                       context,
+                      icon: Icons.dashboard,
+                      title: 'Dashboard',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/admin/dashboard');
+                      },
+                    ),
+                    _buildMenuItem(
+                      context,
                       icon: Icons.admin_panel_settings,
                       title: 'Role Requests',
                       onTap: () {
@@ -283,6 +292,7 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 }
+
 
 
 

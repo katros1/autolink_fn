@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 import '../../../services/user_service.dart';
 import '../../models/role_request.dart';
 import '../../common/widgets/app_drawer.dart';
+import '../../../utils/api_config.dart';
 
 class RoleRequestsScreen extends StatefulWidget {
   const RoleRequestsScreen({super.key});
@@ -24,7 +25,7 @@ class _RoleRequestsScreenState extends State<RoleRequestsScreen> {
     super.initState();
     _fetchRequests();
   }
-
+final baseUrl = ApiConfig.baseUrl;
   Future<void> _fetchRequests() async {
     setState(() {
       _isLoading = true;
@@ -44,7 +45,7 @@ class _RoleRequestsScreenState extends State<RoleRequestsScreen> {
 
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      
       
       final response = await http.get(
         Uri.parse('$baseUrl/api/v1/roles/pending'),
@@ -111,7 +112,7 @@ class _RoleRequestsScreenState extends State<RoleRequestsScreen> {
 
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.put(
         Uri.parse('$baseUrl/api/v1/roles/approve/$requestId'),
@@ -181,7 +182,7 @@ class _RoleRequestsScreenState extends State<RoleRequestsScreen> {
 
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.put(
         Uri.parse('$baseUrl/api/v1/roles/approve/$requestId'),
@@ -398,6 +399,9 @@ class _RoleRequestsScreenState extends State<RoleRequestsScreen> {
     );
   }
 }
+
+
+
 
 
 

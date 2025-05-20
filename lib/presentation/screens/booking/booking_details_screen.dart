@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 import 'package:intl/intl.dart';
 import '../../../services/user_service.dart';
 import '../../models/booking.dart';
+import '../../../utils/api_config.dart';
 
 class BookingDetailsScreen extends StatefulWidget {
   final Booking booking;
@@ -35,7 +36,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return;
       }
       
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.put(
         Uri.parse('$baseUrl/api/v1/bookings/${widget.booking.bookingId}/approve'),
@@ -86,7 +87,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return;
       }
       
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.put(
         Uri.parse('$baseUrl/api/v1/bookings/${widget.booking.bookingId}/reject'),
@@ -138,6 +139,58 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final days = widget.booking.endDate.difference(widget.booking.startDate).inDays;
     // If less than a day, charge for a full day
     return widget.booking.rentalPricePerDay * (days > 0 ? days : 1);
+  }
+
+  // Add this method to handle marking a car as returned
+  Future<void> _markCarAsReturned() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await UserService.getUser();
+      if (user == null || user.token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to mark a car as returned')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      final baseUrl = ApiConfig.baseUrl;
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/v1/bookings/${widget.booking.bookingId}/return'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Car marked as returned successfully')),
+        );
+        Navigator.pop(context, true); // Return true to indicate refresh needed
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to mark car as returned. Please try again.')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
   }
 
   @override
@@ -377,6 +430,30 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     ),
                   ),
                 ],
+              ),
+            
+            // Add "Mark as Returned" button for approved bookings
+            if (widget.booking.bookingStatus == 'APPROVED')
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _markCarAsReturned,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('MARK AS RETURNED'),
+                ),
               ),
           ],
         ),

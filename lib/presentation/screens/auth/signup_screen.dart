@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'verify_otp_screen.dart';
 import 'dart:io' show Platform;
+import '../../../utils/api_config.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -53,7 +54,7 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.post(
         Uri.parse('$baseUrl/api/v1/auth/register'),
@@ -460,6 +461,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 }
+
 
 
 

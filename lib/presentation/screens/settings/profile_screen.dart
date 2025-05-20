@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../services/user_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
+import '../../../utils/api_config.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -66,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.get(
         Uri.parse('$baseUrl/api/v1/users/profile'),
@@ -150,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       // Upload profile image if selected
       if (_profileImageFile != null) {
@@ -251,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       // Create multipart request
       var request = http.MultipartRequest(
@@ -541,6 +542,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+
 
 
 

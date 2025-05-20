@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'set_new_password_screen.dart';
+import '../../../utils/api_config.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   final String email;
@@ -61,7 +62,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     try {
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.post(
         Uri.parse('$baseUrl/api/v1/auth/verify'),
@@ -250,6 +251,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     );
   }
 }
+
 
 
 

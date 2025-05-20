@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 import '../../common/widgets/car_card.dart';
 import '../../common/widgets/app_drawer.dart';
 import '../../models/car.dart';
+import '../../../utils/api_config.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       // Build URL based on selected filter
       String url = '$baseUrl/api/v1/cars/filtered';
@@ -223,16 +224,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Open chat
-        },
-        backgroundColor: const Color(0xFF0A2647),
-        child: const Icon(Icons.chat, color: Colors.white),
-      ),
+      // Remove the floating action button
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     // Open chat
+      //   },
+      //   backgroundColor: const Color(0xFF0A2647),
+      //   child: const Icon(Icons.chat, color: Colors.white),
+      // ),
     );
   }
 }
+
+
 
 
 

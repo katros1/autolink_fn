@@ -8,6 +8,7 @@ import '../../models/rating.dart';
 import '../../common/widgets/app_drawer.dart';
 import '../../../services/user_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../utils/api_config.dart';
 
 class CarDetailsScreen extends StatefulWidget {
   final String carId;
@@ -42,6 +43,11 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
   // Create a key for the scaffold to access the drawer
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Add these variables to the _CarDetailsScreenState class
+  final _ratingController = TextEditingController();
+  int _selectedRating = 0;
+  bool _isSubmittingRating = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,7 +66,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
       
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.get(
         Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'),
@@ -80,6 +86,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         
         // Check if current user is the owner
         final bool isOwner = user != null && user.userId == carData['ownerId'];
+        print('User ID: ${user?.userId}, Car Owner ID: ${carData['ownerId']}, Is Owner: $isOwner');
         
         setState(() {
           _car = Car.fromJson(carData);
@@ -205,7 +212,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         return;
       }
       
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.delete(
         Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'),
@@ -259,9 +266,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         return;
       }
       
-      // For Android emulator, use 10.0.2.2 instead of localhost
-      // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       // Format dates for API
       final startDateFormatted = "${DateFormat('yyyy-MM-dd').format(_startDate)}T10:00:00";
@@ -344,6 +349,132 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         const SnackBar(content: Text('Could not open WhatsApp. Please make sure it is installed.')),
       );
     }
+  }
+
+  // Add this method to handle rating submission
+  Future<void> _submitRating() async {
+    if (_selectedRating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a rating')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmittingRating = true;
+    });
+
+    try {
+      final user = await UserService.getUser();
+      if (user == null || user.token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to rate a car')),
+        );
+        setState(() {
+          _isSubmittingRating = false;
+        });
+        return;
+      }
+      
+      final baseUrl = ApiConfig.baseUrl;
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/v1/cars/${widget.carId}/rate'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${user.token}',
+        },
+        body: jsonEncode({
+          'stars': _selectedRating,
+          'comment': _ratingController.text.trim(),
+        }),
+      );
+      
+      setState(() {
+        _isSubmittingRating = false;
+      });
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rating submitted successfully')),
+        );
+        _ratingController.clear();
+        _selectedRating = 0;
+        _fetchCarDetails(); // Refresh to show the new rating
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['message'] ?? 'Failed to submit rating. Please try again.';
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isSubmittingRating = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  // Add this method to handle updating car availability
+  Future<void> _updateCarAvailability(bool available) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = await UserService.getUser();
+      if (user == null || user.token == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to update car availability')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      final baseUrl = ApiConfig.baseUrl;
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/v1/cars/${widget.carId}/availability?available=$available'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Car availability updated to ${available ? 'available' : 'unavailable'}')),
+        );
+        _fetchCarDetails(); // Refresh to show the updated availability
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update car availability. Please try again.')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _ratingController.dispose();
+    super.dispose();
   }
 
   @override
@@ -798,6 +929,79 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                     ),
                                   ),
                                 ),
+                                if (!_isOwner) ...[
+                                  // Rate This Car section - only shown to non-owners
+                                  Card(
+                                    margin: const EdgeInsets.all(16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Rate This Car',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: List.generate(5, (index) {
+                                              return IconButton(
+                                                icon: Icon(
+                                                  index < _selectedRating ? Icons.star : Icons.star_border,
+                                                  color: Colors.amber,
+                                                  size: 30,
+                                                ),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    _selectedRating = index + 1;
+                                                  });
+                                                },
+                                              );
+                                            }),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          TextField(
+                                            controller: _ratingController,
+                                            maxLines: 3,
+                                            decoration: const InputDecoration(
+                                              hintText: 'Write your review here...',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _isSubmittingRating ? null : _submitRating,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.blue,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                              child: _isSubmittingRating
+                                                  ? const SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child: CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Colors.white,
+                                                      ),
+                                                    )
+                                                  : const Text('Submit Rating'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 // Price and booking or owner actions
                                 Card(
                                   margin: const EdgeInsets.all(16),
@@ -855,6 +1059,68 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                             ),
                                           ),
                                           const SizedBox(height: 16),
+                                          // Add availability toggle
+                                          Card(
+                                            margin: const EdgeInsets.symmetric(vertical: 8),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(16),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'Car Availability',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Your car is currently ${_car!.available ? 'available' : 'unavailable'} for booking',
+                                                          style: TextStyle(
+                                                            color: _car!.available ? Colors.green : Colors.red,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Switch(
+                                                        value: _car!.available,
+                                                        onChanged: (value) {
+                                                          // Show confirmation dialog
+                                                          showDialog(
+                                                            context: context,
+                                                            builder: (context) => AlertDialog(
+                                                              title: Text('${value ? 'Enable' : 'Disable'} Availability'),
+                                                              content: Text(
+                                                                'Are you sure you want to make this car ${value ? 'available' : 'unavailable'} for booking?'
+                                                              ),
+                                                              actions: [
+                                                                TextButton(
+                                                                  onPressed: () => Navigator.of(context).pop(),
+                                                                  child: const Text('Cancel'),
+                                                                ),
+                                                                TextButton(
+                                                                  onPressed: () {
+                                                                    Navigator.of(context).pop();
+                                                                    _updateCarAvailability(value);
+                                                                  },
+                                                                  child: const Text('Confirm'),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          );
+                                                        },
+                                                        activeColor: Colors.green,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
                                           Row(
                                             children: [
                                               Expanded(
@@ -904,6 +1170,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                                               ),
                                             ],
                                           ),
+                                                                                   
                                         ] else if (_car!.forRent) ...[
                                           // Rental booking UI for non-owners
                                           const Text(
@@ -1089,16 +1356,21 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                       ],
                     ),
       // Add a floating action button for chat
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implement chat functionality
-        },
-        backgroundColor: Colors.white,
-        child: const Icon(Icons.chat, color: Color(0xFF00A651)),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     // TODO: Implement chat functionality
+      //   },
+      //   backgroundColor: Colors.white,
+      //   child: const Icon(Icons.chat, color: Color(0xFF00A651)),
+      // ),
     );
   }
 }
+
+
+
+
+
 
 
 

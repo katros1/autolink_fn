@@ -6,6 +6,7 @@ import '../../../services/user_service.dart';
 import '../../common/widgets/app_drawer.dart';
 import '../../common/widgets/car_card.dart';
 import '../../models/car.dart';
+import '../../../utils/api_config.dart';
 
 class OwnerCarsScreen extends StatefulWidget {
   const OwnerCarsScreen({super.key});
@@ -57,7 +58,7 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
 
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       // Build URL based on selected filter and search query
       String url = '$baseUrl/api/v1/cars/owner/filtered';
@@ -245,4 +246,5 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
     );
   }
 }
+
 

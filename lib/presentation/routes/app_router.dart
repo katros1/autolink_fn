@@ -22,6 +22,7 @@ import '../models/booking.dart';
 import '../screens/admin/users_screen.dart';
 import '../screens/admin/user_details_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/admin/dashboard_screen.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -95,6 +96,8 @@ class AppRouter {
         );
       case '/settings':
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
+      case '/admin/dashboard':
+        return MaterialPageRoute(builder: (_) => const AdminDashboardScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
@@ -104,6 +107,7 @@ class AppRouter {
     }
   }
 }
+
 
 
 

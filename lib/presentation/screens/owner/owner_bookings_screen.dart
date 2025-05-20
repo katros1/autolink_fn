@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../services/user_service.dart';
 import '../../common/widgets/app_drawer.dart';
 import '../../models/booking.dart';
+import '../../../utils/api_config.dart';
 
 class OwnerBookingsScreen extends StatefulWidget {
   const OwnerBookingsScreen({super.key});
@@ -44,7 +45,7 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> {
 
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.get(
         Uri.parse('$baseUrl/api/v1/bookings/owner'),
@@ -197,3 +198,5 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> {
     );
   }
 }
+
+

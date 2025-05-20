@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io' show Platform;
 import '../../../services/user_service.dart';
 import '../../common/widgets/app_drawer.dart';
+import '../../../utils/api_config.dart';
 
 class BecomeOwnerScreen extends StatefulWidget {
   const BecomeOwnerScreen({super.key});
@@ -37,7 +38,7 @@ class _BecomeOwnerScreenState extends State<BecomeOwnerScreen> {
 
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.post(
         Uri.parse('$baseUrl/api/v1/roles/request?requestedRole=OWNER'),
@@ -273,3 +274,4 @@ class _BecomeOwnerScreenState extends State<BecomeOwnerScreen> {
     );
   }
 }
+

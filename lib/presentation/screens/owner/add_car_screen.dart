@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
 import '../../../services/user_service.dart';
+import '../../../utils/api_config.dart';
 
 class AddCarScreen extends StatefulWidget {
   const AddCarScreen({super.key});
@@ -132,7 +133,7 @@ class _AddCarScreenState extends State<AddCarScreen> {
       
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       // Create car JSON object
       final carData = {
@@ -821,6 +822,7 @@ class _AddCarScreenState extends State<AddCarScreen> {
     );
   }
 }
+
 
 
 

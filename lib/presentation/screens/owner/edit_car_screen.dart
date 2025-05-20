@@ -6,6 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../services/user_service.dart';
 import '../../models/car.dart';
+import '../../../utils/api_config.dart';
 
 class EditCarScreen extends StatefulWidget {
   final String carId;
@@ -123,7 +124,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
         return;
       }
       
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.get(
         Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'),
@@ -238,7 +239,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
         return;
       }
       
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       // Create multipart request
       var request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'));
@@ -1002,6 +1003,8 @@ class _EditCarScreenState extends State<EditCarScreen> {
     );
   }
 }
+
+
 
 
 

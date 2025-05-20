@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 import '../../../services/user_service.dart';
 import '../../models/user.dart';
 import 'send_verification_screen.dart';
+import '../../../utils/api_config.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       // For Android emulator, use 10.0.2.2 instead of localhost
       // For iOS simulator, use localhost
-      final baseUrl = Platform.isAndroid ? 'http://10.0.2.2:8070' : 'http://localhost:8070';
+      final baseUrl = ApiConfig.baseUrl;
       
       final response = await http.post(
         Uri.parse('$baseUrl/api/v1/auth/login'),
@@ -267,6 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
 
 
 
