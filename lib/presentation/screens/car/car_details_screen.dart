@@ -230,8 +230,12 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Car deleted successfully')),
         );
+        
         // Navigate back to owner cars screen with refresh flag
         Navigator.pop(context, true);
+        
+        // If we have a named route for owner cars, we can also use this approach:
+        // Navigator.pushReplacementNamed(context, '/owner/cars');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to delete car. Please try again.')),
@@ -1366,6 +1370,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
     );
   }
 }
+
 
 
 

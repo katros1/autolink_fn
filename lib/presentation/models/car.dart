@@ -64,6 +64,9 @@ class Car {
   });
 
   factory Car.fromJson(Map<String, dynamic> json) {
+    // Debug print to see what we're getting
+    print('Parsing Car from JSON: ${json.keys}');
+    
     return Car(
       id: json['id'] ?? '',
       ownerId: json['ownerId'] ?? '',
@@ -98,4 +101,5 @@ class Car {
     );
   }
 }
+
 

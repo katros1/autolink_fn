@@ -22,8 +22,19 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   
+  // Add these variables for search functionality
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  
   // Create a key for the scaffold to access the drawer
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void dispose() {
+    // Dispose the controller when the widget is removed
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -38,17 +49,30 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // For Android emulator, use 10.0.2.2 instead of localhost
-      // For iOS simulator, use localhost
       final baseUrl = ApiConfig.baseUrl;
       
-      // Build URL based on selected filter
+      // Build URL based on selected filter and search query
       String url = '$baseUrl/api/v1/cars/filtered';
+      List<String> queryParams = [];
+      
       if (_selectedFilter == 'Rent') {
-        url += '?forRent=true';
+        queryParams.add('forRent=true');
       } else if (_selectedFilter == 'Buy') {
-        url += '?forSale=true';
+        queryParams.add('forSale=true');
       }
+      
+      // Add search query parameter if not empty
+      if (_searchQuery.isNotEmpty) {
+        // Use 'title' parameter instead of 'search'
+        queryParams.add('title=${Uri.encodeComponent(_searchQuery)}');
+      }
+      
+      // Append query parameters to URL
+      if (queryParams.isNotEmpty) {
+        url += '?' + queryParams.join('&');
+      }
+      
+      print('Fetching cars from URL: $url'); // Debug log
       
       final response = await http.get(
         Uri.parse(url),
@@ -142,15 +166,54 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       child: TextField(
+                        controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Search cars...',
                           prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Clear button
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.clear, color: Colors.grey),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchQuery = '';
+                                    });
+                                    _fetchCars(); // Refresh with empty search
+                                  },
+                                ),
+                              // Search button with arrow icon
+                              IconButton(
+                                icon: const Icon(Icons.arrow_forward, color: Color(0xFF00A651)),
+                                onPressed: () {
+                                  // Perform search when icon is clicked
+                                  final query = _searchController.text.trim();
+                                  print('Searching for: "$query"'); // Debug log
+                                  setState(() {
+                                    _searchQuery = query;
+                                  });
+                                  _fetchCars(); // Call your existing fetch method with the search query
+                                },
+                              ),
+                            ],
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.symmetric(vertical: 12),
                         ),
+                        onSubmitted: (value) {
+                          // This still works if keyboard enter functions properly
+                          setState(() {
+                            _searchQuery = value.trim();
+                          });
+                          _fetchCars();
+                        },
+                        textInputAction: TextInputAction.search, // Set keyboard action to search
                       ),
                     ),
                     
@@ -192,6 +255,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                     ),
+                    
+                    if (_searchQuery.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Row(
+                          children: [
+                            const Text('Search results for: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('"$_searchQuery"'),
+                            const Spacer(),
+                            TextButton.icon(
+                              icon: const Icon(Icons.clear, size: 16),
+                              label: const Text('Clear'),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                                _fetchCars();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     
                     const SizedBox(height: 16),
                     
@@ -235,6 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
 
 
 

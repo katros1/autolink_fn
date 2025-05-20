@@ -292,14 +292,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final responseData = jsonDecode(response.body);
         final userData = responseData['data'];
         
-        // Update profile picture URL - add null check
+        // Update profile picture URL with the new response format
         setState(() {
-          _profilePicUrl = userData['profilePicUrl'] ?? '';
+          // The response now directly contains profilePicUrl in the data object
+          _profilePicUrl = userData != null && userData['profilePicUrl'] != null 
+              ? userData['profilePicUrl'] 
+              : '';
           _profileImageFile = null; // Clear the file after successful upload
         });
         
-        // Update local user data
-        await UserService.updateUserInfo(userData);
+        // Update local user data with the new profile picture URL
+        if (userData != null && userData['profilePicUrl'] != null) {
+          // Since we only have profilePicUrl in the response, we need to update just that field
+          final user = await UserService.getUser();
+          if (user != null) {
+            // Create updated user data with the new profile picture
+            final updatedUserData = {
+              'userId': user.userId,
+              'firstName': user.firstName,
+              'lastName': user.lastName,
+              'email': user.email,
+              'role': user.roles,
+              'profilePicture': userData['profilePicUrl'],
+              'accountStatus': user.accountStatus,
+              'verified': user.verified
+            };
+            await UserService.updateUserInfo(updatedUserData);
+          }
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile picture updated successfully')),
@@ -542,6 +562,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+
+
 
 
 

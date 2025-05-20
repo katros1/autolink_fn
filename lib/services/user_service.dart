@@ -42,18 +42,31 @@ class UserService {
     return user?.token;
   }
 
-  // Add this method to update user info
+  // Update user info with proper handling of profile picture
   static Future<void> updateUserInfo(Map<String, dynamic> userData) async {
     final user = await getUser();
     if (user != null) {
-      // Update user properties with new data
-      final updatedUser = User.fromJson({...userData, 'token': user.token});
+      // Create a map from the current user
+      final Map<String, dynamic> currentUserData = user.toJson();
+      
+      // Update the map with new data
+      currentUserData.addAll(userData);
+      
+      // Special handling for profile picture field
+      if (userData.containsKey('profilePicture')) {
+        currentUserData['profilePicture'] = userData['profilePicture'];
+      }
+      
+      // Create updated user with merged data
+      final updatedUser = User.fromJson(currentUserData);
+      
       // Save the updated user
       await saveUser(updatedUser);
     }
   }
 
 }
+
 
 
 

@@ -144,16 +144,6 @@ class _AppDrawerState extends State<AppDrawer> {
                       Navigator.pushNamed(context, '/client/bookings');
                     },
                   ),
-                  _buildMenuItem(
-                    context,
-                    icon: Icons.car_rental,
-                    title: 'Get a Car to Rent or Sell?',
-                    onTap: () {
-                      // Navigate to car listing screen
-                      Navigator.pop(context);
-                      // Add navigation logic here
-                    },
-                  ),
                   // Only show "Become a Car Owner" if user is not already an OWNER or ADMIN
                   if (_user == null || (!_user!.roles.contains('OWNER') && !_user!.roles.contains('ADMIN')))
                     _buildMenuItem(

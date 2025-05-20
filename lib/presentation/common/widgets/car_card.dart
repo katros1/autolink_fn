@@ -1,28 +1,40 @@
 import 'package:flutter/material.dart';
 import '../../models/car.dart';
 import '../../screens/car/car_details_screen.dart';
+import '../../screens/owner/owner_cars_screen.dart';
 
 class CarCard extends StatelessWidget {
   final Car car;
 
-  const CarCard({super.key, required this.car});
+  const CarCard({
+    Key? key,
+    required this.car,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to car details screen when the card is tapped
-        Navigator.pushNamed(
-          context,
-          '/car_details',
-          arguments: {'carId': car.id},
-        );
-      },
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () async {
+          // Navigate to car details and wait for result
+          final result = await Navigator.pushNamed(
+            context,
+            '/car_details',
+            arguments: car.id,
+          );
+          
+          // If returned with refresh flag, refresh the owner cars list
+          if (result == true) {
+            // Find the nearest OwnerCarsScreen and refresh it
+            if (context.mounted) {
+              Navigator.of(context).pushReplacementNamed('/owner_cars');
+            }
+          }
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -137,6 +149,9 @@ class CarCard extends StatelessWidget {
     );
   }
 }
+
+
+
 
 
 

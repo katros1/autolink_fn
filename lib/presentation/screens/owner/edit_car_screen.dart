@@ -25,7 +25,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
   String? _errorMessage;
   Car? _car;
   
-  // Form controllers
+  // Controllers for text fields
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _brandController = TextEditingController();
@@ -42,23 +42,28 @@ class _EditCarScreenState extends State<EditCarScreen> {
   final _countryController = TextEditingController();
   final _addressController = TextEditingController();
   
-  // Form values
+  // Dropdown values
   String _transmission = 'AUTOMATIC';
-  String _fuelType = 'GASOLINE';
+  String _fuelType = 'PETROL';
   String _bodyType = 'SEDAN';
-  bool _forRent = true;
+  
+  // Checkbox values
+  bool _forRent = false;
   bool _forSale = false;
   
   // Images
   File? _coverImage;
   List<File> _newImages = [];
   List<String> _existingImageUrls = [];
-  List<String> _imagesToDelete = [];
+  List<String> _imagesToDelete = []; // Initialize this list
   
   @override
   void initState() {
     super.initState();
-    _fetchCarDetails();
+    // Fetch car details after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchCarDetails();
+    });
   }
   
   void _normalizeEnumValues() {
@@ -125,6 +130,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
       }
       
       final baseUrl = ApiConfig.baseUrl;
+      print('Fetching car details from: $baseUrl/api/v1/cars/${widget.carId}');
       
       final response = await http.get(
         Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'),
@@ -134,53 +140,71 @@ class _EditCarScreenState extends State<EditCarScreen> {
         },
       );
       
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      
       if (response.statusCode == 200) {
-        final carData = jsonDecode(response.body);
+        final jsonData = jsonDecode(response.body);
+        final carData = jsonData['data']; // Make sure we're accessing the 'data' field
         _car = Car.fromJson(carData);
         
-        // Populate form fields with car data
-        _titleController.text = _car!.title;
-        _descriptionController.text = _car!.description;
-        _brandController.text = _car!.brand;
-        _modelController.text = _car!.model;
-        _yearController.text = _car!.year.toString();
-        _colorController.text = _car!.color;
-        _mileageController.text = _car!.mileage.toString();
-        _seatCountController.text = _car!.seatCount.toString();
-        _plateNumberController.text = _car!.plateNumber;
-        _rentalPriceController.text = _car!.rentalPricePerDay.toString();
-        _salePriceController.text = _car!.salePrice.toString();
-        _cityController.text = _car!.city;
-        _stateController.text = _car!.state;
-        _countryController.text = _car!.country;
-        _addressController.text = _car!.address;
+        print('Car object: $_car');
         
-        // Set form values
+        // Populate form fields with car data
         setState(() {
+          _titleController.text = _car!.title;
+          _descriptionController.text = _car!.description;
+          _brandController.text = _car!.brand;
+          _modelController.text = _car!.model;
+          _yearController.text = _car!.year.toString();
+          _colorController.text = _car!.color;
+          _mileageController.text = _car!.mileage.toString();
+          _seatCountController.text = _car!.seatCount.toString();
+          _plateNumberController.text = _car!.plateNumber;
+          _rentalPriceController.text = _car!.rentalPricePerDay.toString();
+          _salePriceController.text = _car!.salePrice.toString();
+          _cityController.text = _car!.city;
+          _stateController.text = _car!.state;
+          _countryController.text = _car!.country;
+          _addressController.text = _car!.address;
+          
+          // Set form values
           _transmission = _car!.transmission;
           _fuelType = _car!.fuelType;
           _bodyType = _car!.bodyType;
           _forRent = _car!.forRent;
           _forSale = _car!.forSale;
-          _existingImageUrls = _car!.imageUrls;
+          
+          // Filter out any empty image URLs
+          _existingImageUrls = _car!.imageUrls.where((url) => url.isNotEmpty).toList();
           
           // Normalize enum values to ensure they match dropdown options
           _normalizeEnumValues();
+          
+          _isLoading = false;
         });
+        
+        print('Form fields populated:');
+        print('Title: ${_titleController.text}');
+        print('Brand: ${_brandController.text}');
+        print('Year: ${_yearController.text}');
+        print('Transmission: $_transmission');
+        print('Fuel Type: $_fuelType');
+        print('Body Type: $_bodyType');
       } else {
         final errorData = jsonDecode(response.body);
         setState(() {
+          _isLoading = false;
           _errorMessage = errorData['message'] ?? 'Failed to fetch car details';
         });
+        print('Failed to fetch car details: $_errorMessage');
       }
     } catch (e) {
       setState(() {
+        _isLoading = false;
         _errorMessage = 'Error: ${e.toString()}';
       });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      print('Error fetching car details: $e');
     }
   }
   
@@ -190,6 +214,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
       setState(() {
         _coverImage = File(pickedFile.path);
       });
+      print('Cover image selected: ${pickedFile.path}');
     }
   }
   
@@ -199,6 +224,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
       setState(() {
         _newImages.addAll(pickedFiles.map((e) => File(e.path)).toList());
       });
+      print('${pickedFiles.length} new images selected. Total new images: ${_newImages.length}');
     }
   }
   
@@ -206,13 +232,16 @@ class _EditCarScreenState extends State<EditCarScreen> {
     setState(() {
       _newImages.removeAt(index);
     });
+    print('Removed new image. Remaining new images: ${_newImages.length}');
   }
   
   void _markExistingImageForDeletion(int index) {
     setState(() {
-      _imagesToDelete.add(_existingImageUrls[index]);
+      String imageUrl = _existingImageUrls[index];
+      _imagesToDelete.add(imageUrl);
       _existingImageUrls.removeAt(index);
     });
+    print('Marked image for deletion. Total to delete: ${_imagesToDelete.length}');
   }
   
   Future<void> _submitForm() async {
@@ -242,7 +271,10 @@ class _EditCarScreenState extends State<EditCarScreen> {
       final baseUrl = ApiConfig.baseUrl;
       
       // Create multipart request
-      var request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/api/v1/cars/${widget.carId}'));
+      var request = http.MultipartRequest(
+        'PUT', 
+        Uri.parse('$baseUrl/api/v1/cars/${widget.carId}')
+      );
       
       // Add headers
       request.headers['Authorization'] = 'Bearer ${user.token}';
@@ -302,10 +334,16 @@ class _EditCarScreenState extends State<EditCarScreen> {
         request.files.add(imageMultipart);
       }
       
+      print('Sending update request to: ${request.url}');
+      print('Fields: ${request.fields}');
+      print('Files: ${request.files.length}');
+      
       // Send request
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
-      var responseBody = response.body;
+      
+      print('Update response status: ${response.statusCode}');
+      print('Update response body: ${response.body}');
       
       if (response.statusCode == 200) {
         // Car updated successfully
@@ -317,7 +355,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
         Navigator.pop(context, true);
       } else {
         // Failed to update car
-        final errorData = jsonDecode(responseBody);
+        final errorData = jsonDecode(response.body);
         setState(() {
           _errorMessage = errorData['message'] ?? 'Failed to update car. Please try again.';
         });
@@ -327,6 +365,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
         );
       }
     } catch (e) {
+      print('Error updating car: $e');
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error: ${e.toString()}';
@@ -350,7 +389,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null && _car == null
+          : _errorMessage != null
               ? Center(child: Text(_errorMessage!))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
@@ -359,7 +398,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Basic Information Section
+                        // Basic Information
                         const Text(
                           'Basic Information',
                           style: TextStyle(
@@ -368,8 +407,6 @@ class _EditCarScreenState extends State<EditCarScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Title
                         TextFormField(
                           controller: _titleController,
                           decoration: const InputDecoration(
@@ -384,8 +421,6 @@ class _EditCarScreenState extends State<EditCarScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Description
                         TextFormField(
                           controller: _descriptionController,
                           decoration: const InputDecoration(
@@ -402,7 +437,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
                         ),
                         const SizedBox(height: 24),
                         
-                        // Car Details Section
+                        // Car Details
                         const Text(
                           'Car Details',
                           style: TextStyle(
@@ -411,8 +446,6 @@ class _EditCarScreenState extends State<EditCarScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Brand and Model
                         Row(
                           children: [
                             Expanded(
@@ -449,8 +482,6 @@ class _EditCarScreenState extends State<EditCarScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Year and Color
                         Row(
                           children: [
                             Expanded(
@@ -466,7 +497,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
                                     return 'Required';
                                   }
                                   if (int.tryParse(value) == null) {
-                                    return 'Invalid year';
+                                    return 'Enter a valid year';
                                   }
                                   return null;
                                 },
@@ -647,7 +678,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
                             child: TextFormField(
                               controller: _rentalPriceController,
                               decoration: const InputDecoration(
-                                labelText: 'Rental Price per Day (USD)',
+                                labelText: 'Rental Price per Day (RWF)',
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
@@ -682,7 +713,7 @@ class _EditCarScreenState extends State<EditCarScreen> {
                             child: TextFormField(
                               controller: _salePriceController,
                               decoration: const InputDecoration(
-                                labelText: 'Sale Price (USD)',
+                                labelText: 'Sale Price (RWF)',
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
@@ -788,126 +819,24 @@ class _EditCarScreenState extends State<EditCarScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Cover Image
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Cover Image'),
+                            const Text('Cover Image', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
-                            if (_coverImage != null)
-                              Stack(
-                                children: [
-                                  Container(
-                                    height: 150,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.file(
-                                        _coverImage!,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 5,
-                                    right: 5,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close, color: Colors.red),
-                                      onPressed: () {
-                                        setState(() {
-                                          _coverImage = null;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else if (_car != null && _car!.coverImageUrl.isNotEmpty)
-                              Stack(
-                                children: [
-                                  Container(
-                                    height: 150,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        _car!.coverImageUrl,
-                                        fit: BoxFit.cover,
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return const Center(child: CircularProgressIndicator());
-                                        },
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return const Center(child: Text('Failed to load image'));
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else
-                              Container(
-                                height: 150,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Center(
-                                  child: Text('No cover image selected'),
-                                ),
-                              ),
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: _pickCoverImage,
-                              icon: const Icon(Icons.add_photo_alternate),
-                              label: const Text('Select Cover Image'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Existing Images
-                        if (_existingImageUrls.isNotEmpty) ...[
-                          const Text('Existing Images'),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 120,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _existingImageUrls.length,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8.0),
-                                  child: Stack(
+                            _coverImage != null
+                                ? Stack(
                                     children: [
                                       Container(
-                                        width: 120,
+                                        height: 150,
+                                        width: double.infinity,
                                         decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey),
                                           borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Image.network(
-                                            _existingImageUrls[index],
+                                          image: DecorationImage(
+                                            image: FileImage(_coverImage!),
                                             fit: BoxFit.cover,
-                                            loadingBuilder: (context, child, loadingProgress) {
-                                              if (loadingProgress == null) return child;
-                                              return const Center(child: CircularProgressIndicator());
-                                            },
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return const Center(child: Text('Failed to load'));
-                                            },
                                           ),
                                         ),
                                       ),
@@ -916,45 +845,174 @@ class _EditCarScreenState extends State<EditCarScreen> {
                                         right: 5,
                                         child: IconButton(
                                           icon: const Icon(Icons.close, color: Colors.red),
-                                          onPressed: () => _markExistingImageForDeletion(index),
+                                          onPressed: () {
+                                            setState(() {
+                                              _coverImage = null;
+                                            });
+                                          },
                                         ),
                                       ),
                                     ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        
-                        // New Images
+                                  )
+                                : _car != null && _car!.coverImageUrl.isNotEmpty
+                                    ? Stack(
+                                        children: [
+                                          Container(
+                                            height: 150,
+                                            width: double.infinity,
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Image.network(
+                                                _car!.coverImageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  print('Error loading cover image: $error');
+                                                  return Container(
+                                                    color: Colors.grey[300],
+                                                    child: const Center(
+                                                      child: Icon(Icons.error, size: 50, color: Colors.grey),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            bottom: 5,
+                                            right: 5,
+                                            child: ElevatedButton.icon(
+                                              onPressed: _pickCoverImage,
+                                              icon: const Icon(Icons.edit),
+                                              label: const Text('Change'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.black.withOpacity(0.7),
+                                                foregroundColor: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Container(
+                                        height: 150,
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Center(
+                                          child: IconButton(
+                                            icon: const Icon(Icons.add_photo_alternate, size: 50),
+                                            onPressed: _pickCoverImage,
+                                          ),
+                                        ),
+                                      ),
+                            const SizedBox(height: 8),
+                            if (_coverImage == null && (_car == null || _car!.coverImageUrl.isEmpty))
+                              ElevatedButton.icon(
+                                onPressed: _pickCoverImage,
+                                icon: const Icon(Icons.add_photo_alternate),
+                                label: const Text('Add Cover Image'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Additional Images
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Add New Images'),
+                            const Text('Additional Images', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
+                            
+                            // Existing images
+                            if (_existingImageUrls.isNotEmpty)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Current Images:'),
+                                  const SizedBox(height: 8),
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                    ),
+                                    itemCount: _existingImageUrls.length,
+                                    itemBuilder: (context, index) {
+                                      final imageUrl = _existingImageUrls[index];
+                                      return Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              imageUrl,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                print('Error loading image at index $index: $error');
+                                                return Container(
+                                                  color: Colors.grey[300],
+                                                  child: const Center(
+                                                    child: Icon(Icons.error, size: 30, color: Colors.grey),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 5,
+                                            right: 5,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withOpacity(0.5),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                                onPressed: () => _markExistingImageForDeletion(index),
+                                                constraints: const BoxConstraints(
+                                                  minWidth: 30,
+                                                  minHeight: 30,
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              ),
+                            
+                            // New images
                             if (_newImages.isNotEmpty)
-                              SizedBox(
-                                height: 120,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: _newImages.length,
-                                  itemBuilder: (context, index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 8.0),
-                                      child: Stack(
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('New Images to Add:'),
+                                  const SizedBox(height: 8),
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                    ),
+                                    itemCount: _newImages.length,
+                                    itemBuilder: (context, index) {
+                                      return Stack(
                                         children: [
                                           Container(
-                                            width: 120,
                                             decoration: BoxDecoration(
-                                              border: Border.all(color: Colors.grey),
                                               borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: Image.file(
-                                                _newImages[index],
+                                              image: DecorationImage(
+                                                image: FileImage(_newImages[index]),
                                                 fit: BoxFit.cover,
                                               ),
                                             ),
@@ -968,16 +1026,17 @@ class _EditCarScreenState extends State<EditCarScreen> {
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
                               ),
-                            const SizedBox(height: 8),
+                            
                             ElevatedButton.icon(
                               onPressed: _pickImages,
                               icon: const Icon(Icons.add_photo_alternate),
-                              label: const Text('Add Images'),
+                              label: const Text('Add More Images'),
                             ),
                           ],
                         ),
@@ -1003,9 +1062,6 @@ class _EditCarScreenState extends State<EditCarScreen> {
     );
   }
 }
-
-
-
 
 
 

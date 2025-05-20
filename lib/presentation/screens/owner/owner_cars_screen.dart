@@ -56,8 +56,6 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
         return;
       }
 
-      // For Android emulator, use 10.0.2.2 instead of localhost
-      // For iOS simulator, use localhost
       final baseUrl = ApiConfig.baseUrl;
       
       // Build URL based on selected filter and search query
@@ -71,12 +69,11 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
       }
       
       if (_searchQuery.isNotEmpty) {
-        queryParams.add('title=$_searchQuery');
+        // Use 'title' parameter instead of 'search'
+        queryParams.add('title=${Uri.encodeComponent(_searchQuery)}');
       }
       
-      queryParams.add('page=0');
-      queryParams.add('size=20');
-      
+      // Append query parameters to URL
       if (queryParams.isNotEmpty) {
         url += '?' + queryParams.join('&');
       }
@@ -134,7 +131,7 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
       drawer: const AppDrawer(),
       body: Column(
         children: [
-          // Search bar
+          // Search and filter bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -142,26 +139,46 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
               decoration: InputDecoration(
                 hintText: 'Search cars...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                    _fetchOwnerCars();
-                  },
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Clear button
+                    if (_searchController.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                          _fetchOwnerCars();
+                        },
+                      ),
+                    // Search button with arrow icon
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward, color: Color(0xFF00A651)),
+                      onPressed: () {
+                        final query = _searchController.text.trim();
+                        setState(() {
+                          _searchQuery = query;
+                        });
+                        _fetchOwnerCars();
+                      },
+                    ),
+                  ],
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
               onSubmitted: (value) {
+                // This still works if keyboard enter functions properly
                 setState(() {
-                  _searchQuery = value;
+                  _searchQuery = value.trim();
                 });
                 _fetchOwnerCars();
               },
+              textInputAction: TextInputAction.search, // Set keyboard action to search
             ),
           ),
           
@@ -223,7 +240,22 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
                                 final car = _cars[index];
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  child: CarCard(car: car),
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      // Navigate to car details and wait for result
+                                      final result = await Navigator.pushNamed(
+                                        context,
+                                        '/car_details',
+                                        arguments: car.id,
+                                      );
+                                      
+                                      // If returned with refresh flag, refresh the cars list
+                                      if (result == true) {
+                                        _fetchOwnerCars();
+                                      }
+                                    },
+                                    child: CarCard(car: car),
+                                  ),
                                 );
                               },
                             ),
@@ -246,5 +278,11 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
     );
   }
 }
+
+
+
+
+
+
 
 
