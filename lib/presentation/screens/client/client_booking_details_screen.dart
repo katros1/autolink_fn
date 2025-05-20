@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../services/user_service.dart';
 import '../../models/booking.dart';
 import '../../../utils/api_config.dart';
+import '../../common/widgets/custom_toast.dart';
 
 class ClientBookingDetailsScreen extends StatefulWidget {
   final Booking booking;
@@ -48,8 +49,10 @@ class _ClientBookingDetailsScreenState extends State<ClientBookingDetailsScreen>
     try {
       final user = await UserService.getUser();
       if (user == null || user.token == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You must be logged in to cancel bookings')),
+        CustomToast.show(
+          context: context,
+          message: 'You must be logged in to cancel bookings',
+          type: ToastType.warning,
         );
         setState(() {
           _isLoading = false;
@@ -72,21 +75,27 @@ class _ClientBookingDetailsScreenState extends State<ClientBookingDetailsScreen>
       });
       
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking cancelled successfully')),
+        CustomToast.show(
+          context: context,
+          message: 'Booking cancelled successfully',
+          type: ToastType.success,
         );
         Navigator.pop(context, true); // Return true to indicate refresh needed
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to cancel booking. Please try again.')),
+        CustomToast.show(
+          context: context,
+          message: 'Failed to cancel booking. Please try again.',
+          type: ToastType.error,
         );
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+      CustomToast.show(
+        context: context,
+        message: 'Error: ${e.toString()}',
+        type: ToastType.error,
       );
     }
   }
@@ -391,6 +400,7 @@ class _ClientBookingDetailsScreenState extends State<ClientBookingDetailsScreen>
     }
   }
 }
+
 
 
 

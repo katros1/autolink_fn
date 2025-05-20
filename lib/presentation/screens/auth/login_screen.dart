@@ -6,6 +6,7 @@ import '../../../services/user_service.dart';
 import '../../models/user.dart';
 import 'send_verification_screen.dart';
 import '../../../utils/api_config.dart';
+import '../../../presentation/common/widgets/custom_toast.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -69,8 +70,11 @@ class _LoginScreenState extends State<LoginScreen> {
         final user = User.fromJson(userData);
         await UserService.saveUser(user);
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'] ?? 'Login successful!')),
+        // Show success toast
+        CustomToast.show(
+          context: context,
+          message: responseData['message'] ?? 'Login successful!',
+          type: ToastType.success,
         );
         
         // Navigate to home screen
@@ -78,8 +82,12 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         // Login failed
         final errorData = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorData['message'] ?? 'Login failed')),
+        
+        // Show error toast
+        CustomToast.show(
+          context: context,
+          message: errorData['message'] ?? 'Login failed',
+          type: ToastType.error,
         );
       }
     } catch (e) {
@@ -268,6 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
 
 
 

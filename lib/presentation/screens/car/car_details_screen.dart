@@ -9,6 +9,7 @@ import '../../common/widgets/app_drawer.dart';
 import '../../../services/user_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../utils/api_config.dart';
+import '../../common/widgets/custom_toast.dart';
 
 class CarDetailsScreen extends StatefulWidget {
   final String carId;
@@ -261,8 +262,10 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
       // Get current user
       final user = await UserService.getUser();
       if (user == null || user.token == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You must be logged in to book a car')),
+        CustomToast.show(
+          context: context,
+          message: 'You must be logged in to book a car',
+          type: ToastType.warning,
         );
         setState(() {
           _isLoading = false;
@@ -295,32 +298,57 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Booking successful
         final responseData = jsonDecode(response.body);
-        final bookingId = responseData['data']['id'];
+        
+        // Add null checks to safely access nested properties
+        final bookingId = responseData != null && 
+                          responseData['data'] != null && 
+                          responseData['data']['id'] != null 
+                          ? responseData['data']['id'] 
+                          : null;
         
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking successful!')),
+        CustomToast.show(
+          context: context,
+          message: 'Booking successful!',
+          type: ToastType.success,
         );
         
         // Navigate to booking details or confirmation screen
-        // TODO: Add navigation to booking details screen
-        // Navigator.pushNamed(context, '/booking_details', arguments: {'bookingId': bookingId});
+        if (bookingId != null) {
+          // Navigate to booking details when available
+          // Navigator.pushNamed(context, '/client/booking/details', arguments: {'bookingId': bookingId});
+          
+          // For now, just navigate to client bookings screen to see all bookings
+          Navigator.pushNamed(context, '/client/bookings');
+        }
       } else {
         // Booking failed
-        final errorData = jsonDecode(response.body);
+        Map<String, dynamic> errorData = {};
+        try {
+          errorData = jsonDecode(response.body);
+        } catch (e) {
+          // If response body is not valid JSON
+          print('Error parsing response: $e');
+        }
+        
         final errorMessage = errorData['message'] ?? 'Failed to book car. Please try again.';
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
+        CustomToast.show(
+          context: context,
+          message: errorMessage,
+          type: ToastType.error,
         );
       }
     } catch (e) {
+      print('Booking error: $e');
       setState(() {
         _isLoading = false;
       });
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+      CustomToast.show(
+        context: context,
+        message: 'Error: ${e.toString()}',
+        type: ToastType.error,
       );
     }
   }
@@ -1370,6 +1398,8 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
     );
   }
 }
+
+
 
 
 
