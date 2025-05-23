@@ -29,7 +29,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Have a better sharing experience',
+                'Have a better renting experience',
                 style: TextStyle(
                   color: Colors.grey,
                   fontSize: 16,

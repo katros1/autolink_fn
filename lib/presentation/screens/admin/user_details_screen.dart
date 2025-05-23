@@ -325,18 +325,6 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                                           ),
                                   ),
                                   const SizedBox(height: 16),
-                                  OutlinedButton(
-                                    onPressed: () {
-                                      // TODO: Implement reset password functionality
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Reset password - Not implemented yet')),
-                                      );
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      minimumSize: const Size(200, 50),
-                                    ),
-                                    child: const Text('Reset Password'),
-                                  ),
                                 ],
                               ),
                             ),

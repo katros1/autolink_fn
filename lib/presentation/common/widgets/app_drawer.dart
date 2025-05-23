@@ -136,6 +136,7 @@ class _AppDrawerState extends State<AppDrawer> {
                       Navigator.pushReplacementNamed(context, '/home');
                     },
                   ),
+                  if (_user == null || !_user!.roles.contains('ADMIN'))
                   ListTile(
                     leading: const Icon(Icons.history),
                     title: const Text('My Booking History'),

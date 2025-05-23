@@ -113,20 +113,7 @@ class _OwnerCarsScreenState extends State<OwnerCarsScreen> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: const Text('My Cars'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              // Navigate to add new car screen and wait for result
-              final result = await Navigator.pushNamed(context, '/add_car');
-              // If returned with refresh flag, refetch cars
-              if (result == true) {
-                _fetchOwnerCars();
-              }
-            },
-          ),
-        ],
+        title: const Text('My Cars')
       ),
       drawer: const AppDrawer(),
       body: Column(

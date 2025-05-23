@@ -31,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    // Dispose the controller when the widget is removed
     _searchController.dispose();
     super.dispose();
   }
@@ -51,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final baseUrl = ApiConfig.baseUrl;
       
-      // Build URL based on selected filter and search query
       String url = '$baseUrl/api/v1/cars/filtered';
       List<String> queryParams = [];
       
@@ -60,19 +58,15 @@ class _HomeScreenState extends State<HomeScreen> {
       } else if (_selectedFilter == 'Buy') {
         queryParams.add('forSale=true');
       }
-      
-      // Add search query parameter if not empty
+
       if (_searchQuery.isNotEmpty) {
-        // Use 'title' parameter instead of 'search'
+
         queryParams.add('title=${Uri.encodeComponent(_searchQuery)}');
       }
-      
-      // Append query parameters to URL
+
       if (queryParams.isNotEmpty) {
         url += '?' + queryParams.join('&');
       }
-      
-      print('Fetching cars from URL: $url'); // Debug log
       
       final response = await http.get(
         Uri.parse(url),
@@ -137,13 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // Empty SizedBox to balance the layout
                   const SizedBox(width: 48),
                 ],
               ),
             ),
           ),
-          // Rest of the content
           Expanded(
             child: SafeArea(
               top: false,
@@ -151,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    // Search bar
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -310,14 +301,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      // Remove the floating action button
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //     // Open chat
-      //   },
-      //   backgroundColor: const Color(0xFF0A2647),
-      //   child: const Icon(Icons.chat, color: Colors.white),
-      // ),
     );
   }
 }

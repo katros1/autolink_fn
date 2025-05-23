@@ -10,16 +10,12 @@ class CustomToast {
     Duration duration = const Duration(seconds: 3),
     VoidCallback? onDismiss,
   }) {
-    // Dismiss any existing toast
     _dismissCurrentToast(context);
-    
-    // Get the overlay state
+
     final overlay = Overlay.of(context);
-    
-    // Create a variable to hold the entry
+
     late OverlayEntry entry;
-    
-    // Now define the entry
+
     entry = OverlayEntry(
       builder: (context) => _ToastWidget(
         message: message,
@@ -33,8 +29,7 @@ class CustomToast {
     
     // Insert the overlay entry
     overlay.insert(entry);
-    
-    // Auto dismiss after duration
+
     Future.delayed(duration, () {
       if (entry.mounted) {
         entry.remove();
@@ -44,7 +39,6 @@ class CustomToast {
   }
   
   static void _dismissCurrentToast(BuildContext context) {
-    // This would be implemented if you want to track and dismiss existing toasts
   }
 }
 
